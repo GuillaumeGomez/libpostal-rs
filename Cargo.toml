@@ -1,0 +1,20 @@
+[package]
+description = "Rust bindings for the libpostal library"
+name = "rpostal"
+authors = ["Guillaume Gomez <guillaume1.gomez@gmail.com>"]
+readme = "README.md"
+version = "0.1.0"
+repository = "https://github.com/GuillaumeGomez/libpostal-rs"
+build = "build.rs"
+
+[badges]
+travis-ci = { repository = "GuillaumeGomez/libpostal-rs" }
+
+[lib]
+name = "rpostal"
+
+[dependencies]
+libc = "0.2"
+
+[build-dependencies]
+pkg-config = "0.3.7"
