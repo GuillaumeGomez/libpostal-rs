@@ -25,9 +25,10 @@ impl ToRust for *const c_char {
 
     #[inline]
     fn to_rust(&self) -> Self::Out {
-        String::from_utf8_lossy(unsafe {
-            CStr::from_ptr(*self)
-        }.to_bytes()).into_owned()
+        if self.is_null() {
+            return String::new();
+        }
+        String::from_utf8_lossy(unsafe { CStr::from_ptr(*self) }.to_bytes()).into_owned()
     }
 }
 
@@ -36,9 +37,11 @@ impl ToRust for *mut c_char {
 
     #[inline]
     fn to_rust(&self) -> Self::Out {
-        String::from_utf8_lossy(unsafe {
-            CStr::from_ptr(*self as *const c_char)
-        }.to_bytes()).into_owned()
+        if self.is_null() {
+            return String::new();
+        }
+        String::from_utf8_lossy(unsafe { CStr::from_ptr(*self as *const c_char) }.to_bytes())
+            .into_owned()
     }
 }
 
@@ -69,7 +72,7 @@ impl ToC for Path {
     fn to_c(&self) -> Self::Out {
         use std::os::unix::ffi::OsStrExt;
 
-        CString::new(self.as_os_str().as_bytes()).expect("Invalid path with NUL bytes")
+        CString::new(self.as_os_str().as_bytes()).expect("Invalid path with '\0' bytes")
     }
 
     #[cfg(windows)]
@@ -85,6 +88,15 @@ impl ToC for Path {
         } else {
             CString::new(path_str.as_bytes())
         }
-        .expect("Invalid path with NUL bytes")
+        .expect("Invalid path with '\0' bytes")
+    }
+}
+
+impl ToC for str {
+    type Out = CString;
+
+    #[inline]
+    fn to_c(&self) -> Self::Out {
+        CString::new(self).expect("Invalid string with '\0' byte")
     }
 }

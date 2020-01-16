@@ -3,7 +3,7 @@ use std::ffi::CString;
 use sys;
 use traits::{ToC, ToRust};
 
-use libc::c_char;
+use libc::{c_char, free};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AddressComponents {
@@ -12,9 +12,7 @@ pub struct AddressComponents {
 
 impl AddressComponents {
     pub fn new() -> AddressComponents {
-        AddressComponents {
-            inner: 0,
-        }
+        AddressComponents { inner: 0 }
     }
 
     pub fn add(&mut self, component: AddressComponent) -> &mut AddressComponents {
@@ -29,9 +27,7 @@ impl AddressComponents {
     }
 
     pub(crate) fn from_c(value: u16) -> AddressComponents {
-        AddressComponents {
-            inner: value,
-        }
+        AddressComponents { inner: value }
     }
 }
 
@@ -84,6 +80,17 @@ impl ToC for AddressComponent {
     }
 }
 
+// This type is used mostly to not forget to free CString memory once we're done.
+pub(crate) struct CStringsWrapper(Vec<*mut c_char>);
+
+impl Drop for CStringsWrapper {
+    fn drop(&mut self) {
+        for x in self.0.drain(..) {
+            let _ = unsafe { CString::from_raw(x) };
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct NormalizeOptions {
     pub languages: Vec<String>,
@@ -109,53 +116,67 @@ pub struct NormalizeOptions {
 }
 
 impl ToC for NormalizeOptions {
-    type Out = (Vec<*mut c_char>, sys::libpostal_normalize_options_t);
+    type Out = (CStringsWrapper, sys::libpostal_normalize_options_t);
 
     // To prevent cloning and memory leak, we keep the array of pointers to get it back once we
     // used the struct.
     fn to_c(&self) -> Self::Out {
-        let languages = self.languages.iter()
-            .map(|s| CString::new(s.as_str()).expect("CString::new failed").into_raw())
+        let languages = self
+            .languages
+            .iter()
+            .map(|s| {
+                CString::new(s.as_str())
+                    .expect("CString::new failed")
+                    .into_raw()
+            })
             .collect::<Vec<_>>();
         let ptr = languages.as_ptr();
         let len = languages.len();
 
-        (languages,
-        sys::libpostal_normalize_options_t {
-            languages: ptr as usize as *mut _,
-            num_languages: len,
-            address_components: self.address_components.to_c(),
-            latin_ascii: self.latin_ascii.to_c(),
-            transliterate: self.transliterate.to_c(),
-            strip_accents: self.strip_accents.to_c(),
-            decompose: self.decompose.to_c(),
-            lowercase: self.lowercase.to_c(),
-            trim_string: self.trim_string.to_c(),
-            drop_parentheticals: self.drop_parentheticals.to_c(),
-            replace_numeric_hyphens: self.replace_numeric_hyphens.to_c(),
-            delete_numeric_hyphens: self.delete_numeric_hyphens.to_c(),
-            split_alpha_from_numeric: self.split_alpha_from_numeric.to_c(),
-            replace_word_hyphens: self.replace_word_hyphens.to_c(),
-            delete_word_hyphens: self.delete_word_hyphens.to_c(),
-            delete_final_periods: self.delete_final_periods.to_c(),
-            delete_acronym_periods: self.delete_acronym_periods.to_c(),
-            drop_english_possessives: self.drop_english_possessives.to_c(),
-            delete_apostrophes: self.delete_apostrophes.to_c(),
-            expand_numex: self.expand_numex.to_c(),
-            roman_numerals: self.roman_numerals.to_c(),
-        })
+        (
+            CStringsWrapper(languages),
+            sys::libpostal_normalize_options_t {
+                languages: ptr as usize as *mut _,
+                num_languages: len,
+                address_components: self.address_components.to_c(),
+                latin_ascii: self.latin_ascii.to_c(),
+                transliterate: self.transliterate.to_c(),
+                strip_accents: self.strip_accents.to_c(),
+                decompose: self.decompose.to_c(),
+                lowercase: self.lowercase.to_c(),
+                trim_string: self.trim_string.to_c(),
+                drop_parentheticals: self.drop_parentheticals.to_c(),
+                replace_numeric_hyphens: self.replace_numeric_hyphens.to_c(),
+                delete_numeric_hyphens: self.delete_numeric_hyphens.to_c(),
+                split_alpha_from_numeric: self.split_alpha_from_numeric.to_c(),
+                replace_word_hyphens: self.replace_word_hyphens.to_c(),
+                delete_word_hyphens: self.delete_word_hyphens.to_c(),
+                delete_final_periods: self.delete_final_periods.to_c(),
+                delete_acronym_periods: self.delete_acronym_periods.to_c(),
+                drop_english_possessives: self.drop_english_possessives.to_c(),
+                delete_apostrophes: self.delete_apostrophes.to_c(),
+                expand_numex: self.expand_numex.to_c(),
+                roman_numerals: self.roman_numerals.to_c(),
+            },
+        )
     }
 }
 
 impl ToRust for sys::libpostal_normalize_options_t {
     type Out = NormalizeOptions;
 
+    /// Once this one has been called, `self` isn't usable anymore!
     fn to_rust(&self) -> NormalizeOptions {
         let mut languages = Vec::with_capacity(self.num_languages);
 
-        if !self.languages.is_null() && self.num_languages > 0 {
-            for pos in 0..self.num_languages {
-                languages.push(unsafe { (*self.languages.offset(pos as _)).to_rust() });
+        if !self.languages.is_null() {
+            unsafe {
+                for pos in 0..self.num_languages {
+                    let elem = self.languages.offset(pos as _);
+                    languages.push((*elem).to_rust());
+                    free(*elem as _);
+                }
+                free(self.languages as _);
             }
         }
 
@@ -181,5 +202,61 @@ impl ToRust for sys::libpostal_normalize_options_t {
             expand_numex: self.expand_numex.to_rust(),
             roman_numerals: self.roman_numerals.to_rust(),
         }
+    }
+}
+
+// This type is used mostly to not forget to free CString memory once we're done.
+pub(crate) struct CStringWrapper(*mut c_char);
+
+impl Drop for CStringWrapper {
+    fn drop(&mut self) {
+        unsafe { CString::from_raw(self.0) };
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct AddressParserOptions {
+    language: String,
+    country: String,
+}
+
+impl ToC for AddressParserOptions {
+    type Out = (
+        (CStringWrapper, CStringWrapper),
+        sys::libpostal_address_parser_options_t,
+    );
+
+    #[inline]
+    fn to_c(&self) -> Self::Out {
+        let language = CString::new(self.language.as_str())
+            .expect("CString::new failed")
+            .into_raw() as usize;
+        let country = CString::new(self.language.as_str())
+            .expect("CString::new failed")
+            .into_raw() as usize;
+
+        (
+            (CStringWrapper(language as _), CStringWrapper(country as _)),
+            sys::libpostal_address_parser_options_t {
+                language: language as _,
+                country: country as _,
+            },
+        )
+    }
+}
+
+impl ToRust for sys::libpostal_address_parser_options_t {
+    type Out = AddressParserOptions;
+
+    #[inline]
+    fn to_rust(&self) -> AddressParserOptions {
+        let language = self.language.to_rust();
+        let country = self.country.to_rust();
+
+        unsafe {
+            free(self.language as _);
+            free(self.country as _);
+        }
+        AddressParserOptions { language, country }
     }
 }

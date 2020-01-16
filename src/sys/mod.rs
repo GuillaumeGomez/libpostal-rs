@@ -177,6 +177,7 @@ pub const LIBPOSTAL_ADDRESS_POSTAL_CODE: u16 = (1 << 14);
 pub const LIBPOSTAL_ADDRESS_PO_BOX: u16 = (1 << 15);
 pub const LIBPOSTAL_ADDRESS_ALL: u16 = ((1u32 << 16) - 1) as u16;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct libpostal_normalize_options_t {
     pub languages: *mut *mut c_char,
@@ -202,12 +203,14 @@ pub struct libpostal_normalize_options_t {
     pub roman_numerals: c_bool,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct libpostal_address_parser_options_t {
     pub language: *mut c_char,
     pub country: *mut c_char,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct libpostal_address_parser_response_t {
     pub num_components: size_t,
@@ -215,6 +218,7 @@ pub struct libpostal_address_parser_response_t {
     pub labels: *mut *mut c_char,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct libpostal_near_dupe_hash_options_t {
     pub with_name: c_bool,
@@ -232,6 +236,7 @@ pub struct libpostal_near_dupe_hash_options_t {
     pub address_only_keys: c_bool,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct libpostal_duplicate_options_t {
     pub num_languages: size_t,
@@ -239,6 +244,7 @@ pub struct libpostal_duplicate_options_t {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Debug)]
 #[repr(C)]
 pub enum libpostal_duplicate_status_t {
     LIBPOSTAL_NULL_DUPLICATE_STATUS = -1,
@@ -248,6 +254,7 @@ pub enum libpostal_duplicate_status_t {
     LIBPOSTAL_EXACT_DUPLICATE = 9,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct libpostal_fuzzy_duplicate_options_t {
     pub num_languages: size_t,
@@ -256,12 +263,14 @@ pub struct libpostal_fuzzy_duplicate_options_t {
     pub likely_dupe_threshold: c_double,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct libpostal_fuzzy_duplicate_status_t {
     pub status: libpostal_duplicate_status_t,
     pub similarity: c_double,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct libpostal_token_t {
     pub offset: size_t,
@@ -269,6 +278,7 @@ pub struct libpostal_token_t {
     pub type_: u16,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct libpostal_normalized_token_t {
     pub str: *mut c_char,

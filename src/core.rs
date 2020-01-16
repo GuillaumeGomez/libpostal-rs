@@ -1,11 +1,13 @@
 use std::marker::PhantomData;
 use std::path::Path;
 
+use sys;
+use traits::{ToC, ToRust};
+use utils::ptr_to_rust;
+
 use AddressParser;
 use LanguageClassifier;
 use NormalizeOptions;
-use sys;
-use traits::{ToC, ToRust};
 
 pub struct Core {
     inner: PhantomData<u32>,
@@ -71,6 +73,34 @@ impl Core {
 
     pub fn get_default_options(&self) -> NormalizeOptions {
         unsafe { sys::libpostal_get_default_options() }.to_rust()
+    }
+
+    pub fn expand_address(&self, input: &str, options: NormalizeOptions) -> Vec<String> {
+        let input = input.to_c();
+        let (_, options) = options.to_c();
+        let mut size = 0;
+
+        let ptr = unsafe { sys::libpostal_expand_address(input.as_ptr(), options, &mut size) };
+        let ret = ptr_to_rust(ptr, size);
+        // Apparently we have to free memory of a char** using THIS function so let's go...
+        unsafe {
+            sys::libpostal_expansion_array_destroy(ptr, size);
+        }
+        ret
+    }
+
+    pub fn expand_address_root(&self, input: &str, options: NormalizeOptions) -> Vec<String> {
+        let input = input.to_c();
+        let (_, options) = options.to_c();
+        let mut size = 0;
+
+        let ptr = unsafe { sys::libpostal_expand_address_root(input.as_ptr(), options, &mut size) };
+        let ret = ptr_to_rust(ptr, size);
+        // Apparently we have to free memory of a char** using THIS function so let's go...
+        unsafe {
+            sys::libpostal_expansion_array_destroy(ptr, size);
+        }
+        ret
     }
 }
 

@@ -12,7 +12,7 @@ fn main() {
             println!("cargo:rustc-link-lib=dylib={}", lib_);
         }
         println!("cargo:rustc-link-search=native={}", lib_dir);
-        return ;
+        return;
     }
     println!("cargo:rustc-link-lib=dylib={}", package_name);
 }
