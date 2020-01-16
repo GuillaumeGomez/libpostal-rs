@@ -32,40 +32,40 @@ impl Core {
         }
     }
 
-    pub fn setup_parser(&self) -> Option<AddressParser> {
+    pub fn setup_parser<'a>(&'a self) -> Option<AddressParser<'a>> {
         if unsafe { sys::libpostal_setup_parser() }.to_rust() {
-            Some(AddressParser { inner: PhantomData })
+            Some(AddressParser { inner: self })
         } else {
             None
         }
     }
 
-    pub fn setup_parser_datadir<P: AsRef<Path>>(&self, datadir: P) -> Option<AddressParser> {
+    pub fn setup_parser_datadir<'a, P: AsRef<Path>>(&'a self, datadir: P) -> Option<AddressParser<'a>> {
         let datadir = datadir.as_ref();
         let c = datadir.to_c();
         if unsafe { sys::libpostal_setup_parser_datadir(c.as_ptr()) }.to_rust() {
-            Some(AddressParser { inner: PhantomData })
+            Some(AddressParser { inner: self })
         } else {
             None
         }
     }
 
-    pub fn setup_language_classifier(&self) -> Option<LanguageClassifier> {
+    pub fn setup_language_classifier<'a>(&'a self) -> Option<LanguageClassifier<'a>> {
         if unsafe { sys::libpostal_setup_language_classifier() }.to_rust() {
-            Some(LanguageClassifier { inner: PhantomData })
+            Some(LanguageClassifier { inner: self })
         } else {
             None
         }
     }
 
-    pub fn setup_language_classifier_datadir<P: AsRef<Path>>(
-        &self,
+    pub fn setup_language_classifier_datadir<'a, P: AsRef<Path>>(
+        &'a self,
         datadir: P,
-    ) -> Option<LanguageClassifier> {
+    ) -> Option<LanguageClassifier<'a>> {
         let datadir = datadir.as_ref();
         let c = datadir.to_c();
         if unsafe { sys::libpostal_setup_language_classifier_datadir(c.as_ptr()) }.to_rust() {
-            Some(LanguageClassifier { inner: PhantomData })
+            Some(LanguageClassifier { inner: self })
         } else {
             None
         }

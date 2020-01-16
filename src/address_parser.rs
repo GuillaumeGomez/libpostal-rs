@@ -1,21 +1,21 @@
-use std::marker::PhantomData;
-
 use sys;
 use traits::{ToC, ToRust};
 
 use AddressParserOptions;
+use Core;
 
-pub struct AddressParser {
-    pub(crate) inner: PhantomData<u32>,
+pub struct AddressParser<'a> {
+    #[allow(dead_code)]
+    pub(crate) inner: &'a Core,
 }
 
-impl Drop for AddressParser {
+impl<'a> Drop for AddressParser<'a> {
     fn drop(&mut self) {
         unsafe { sys::libpostal_teardown_parser() }
     }
 }
 
-impl AddressParser {
+impl<'a> AddressParser<'a> {
     pub fn get_default_options(&self) -> AddressParserOptions {
         unsafe { sys::libpostal_get_address_parser_default_options() }.to_rust()
     }

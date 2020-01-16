@@ -1,13 +1,14 @@
-use std::marker::PhantomData;
-
 use sys;
 use traits::ToRust;
 
-pub struct LanguageClassifier {
-    pub(crate) inner: PhantomData<u32>,
+use Core;
+
+pub struct LanguageClassifier<'a> {
+    #[allow(dead_code)]
+    pub(crate) inner: &'a Core,
 }
 
-impl Drop for LanguageClassifier {
+impl<'a> Drop for LanguageClassifier<'a> {
     fn drop(&mut self) {
         unsafe { sys::libpostal_teardown_language_classifier() }
     }

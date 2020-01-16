@@ -1,7 +1,7 @@
-use libc::{c_char, c_double, c_int, size_t};
+use libc::{c_char, c_double, size_t};
 
 #[allow(non_camel_case_types)]
-pub type c_bool = c_int;
+pub type c_bool = i8;
 
 extern "C" {
     pub fn libpostal_setup() -> c_bool;
