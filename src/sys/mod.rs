@@ -159,6 +159,24 @@ extern "C" {
     pub fn libpostal_parser_print_features(print_features: c_bool) -> c_bool;
 }
 
+pub const LIBPOSTAL_ADDRESS_NONE: u16 = 0;
+pub const LIBPOSTAL_ADDRESS_ANY: u16 = (1 << 0);
+pub const LIBPOSTAL_ADDRESS_NAME: u16 = (1 << 1);
+pub const LIBPOSTAL_ADDRESS_HOUSE_NUMBER: u16 = (1 << 2);
+pub const LIBPOSTAL_ADDRESS_STREET: u16 = (1 << 3);
+pub const LIBPOSTAL_ADDRESS_UNIT: u16 = (1 << 4);
+pub const LIBPOSTAL_ADDRESS_LEVEL: u16 = (1 << 5);
+pub const LIBPOSTAL_ADDRESS_STAIRCASE: u16 = (1 << 6);
+pub const LIBPOSTAL_ADDRESS_ENTRANCE: u16 = (1 << 7);
+
+pub const LIBPOSTAL_ADDRESS_CATEGORY: u16 = (1 << 8);
+pub const LIBPOSTAL_ADDRESS_NEAR: u16 = (1 << 9);
+
+pub const LIBPOSTAL_ADDRESS_TOPONYM: u16 = (1 << 13);
+pub const LIBPOSTAL_ADDRESS_POSTAL_CODE: u16 = (1 << 14);
+pub const LIBPOSTAL_ADDRESS_PO_BOX: u16 = (1 << 15);
+pub const LIBPOSTAL_ADDRESS_ALL: u16 = ((1u32 << 16) - 1) as u16;
+
 #[repr(C)]
 pub struct libpostal_normalize_options_t {
     pub languages: *mut *mut c_char,
