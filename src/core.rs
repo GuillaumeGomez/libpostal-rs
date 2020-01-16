@@ -40,7 +40,10 @@ impl Core {
         }
     }
 
-    pub fn setup_parser_datadir<'a, P: AsRef<Path>>(&'a self, datadir: P) -> Option<AddressParser<'a>> {
+    pub fn setup_parser_datadir<'a, P: AsRef<Path>>(
+        &'a self,
+        datadir: P,
+    ) -> Option<AddressParser<'a>> {
         let datadir = datadir.as_ref();
         let c = datadir.to_c();
         if unsafe { sys::libpostal_setup_parser_datadir(c.as_ptr()) }.to_rust() {

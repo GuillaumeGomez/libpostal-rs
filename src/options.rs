@@ -260,3 +260,65 @@ impl ToRust for sys::libpostal_address_parser_options_t {
         AddressParserOptions { language, country }
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct NearDupeHashOptions {
+    pub with_name: bool,
+    pub with_address: bool,
+    pub with_unit: bool,
+    pub with_city_or_equivalent: bool,
+    pub with_small_containing_boundaries: bool,
+    pub with_postal_code: bool,
+    pub with_latlon: bool,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub geohash_precision: u32,
+    pub name_and_address_keys: bool,
+    pub name_only_keys: bool,
+    pub address_only_keys: bool,
+}
+
+impl ToC for NearDupeHashOptions {
+    type Out = sys::libpostal_near_dupe_hash_options_t;
+
+    fn to_c(&self) -> Self::Out {
+        sys::libpostal_near_dupe_hash_options_t {
+            with_name: self.with_name.to_c(),
+            with_address: self.with_address.to_c(),
+            with_unit: self.with_unit.to_c(),
+            with_city_or_equivalent: self.with_city_or_equivalent.to_c(),
+            with_small_containing_boundaries: self.with_small_containing_boundaries.to_c(),
+            with_postal_code: self.with_postal_code.to_c(),
+            with_latlon: self.with_latlon.to_c(),
+            latitude: self.latitude,
+            longitude: self.longitude,
+            geohash_precision: self.geohash_precision,
+            name_and_address_keys: self.name_and_address_keys.to_c(),
+            name_only_keys: self.name_only_keys.to_c(),
+            address_only_keys: self.address_only_keys.to_c(),
+        }
+    }
+}
+
+impl ToRust for sys::libpostal_near_dupe_hash_options_t {
+    type Out = NearDupeHashOptions;
+
+    #[inline]
+    fn to_rust(&self) -> Self::Out {
+        NearDupeHashOptions {
+            with_name: self.with_name.to_rust(),
+            with_address: self.with_address.to_rust(),
+            with_unit: self.with_unit.to_rust(),
+            with_city_or_equivalent: self.with_city_or_equivalent.to_rust(),
+            with_small_containing_boundaries: self.with_small_containing_boundaries.to_rust(),
+            with_postal_code: self.with_postal_code.to_rust(),
+            with_latlon: self.with_latlon.to_rust(),
+            latitude: self.latitude,
+            longitude: self.longitude,
+            geohash_precision: self.geohash_precision,
+            name_and_address_keys: self.name_and_address_keys.to_rust(),
+            name_only_keys: self.name_only_keys.to_rust(),
+            address_only_keys: self.address_only_keys.to_rust(),
+        }
+    }
+}

@@ -100,3 +100,22 @@ impl ToC for str {
         CString::new(self).expect("Invalid string with '\0' byte")
     }
 }
+
+impl<'a> ToC for &'a [String] {
+    type Out = (Vec<CString>, Vec<*const c_char>);
+
+    #[inline]
+    fn to_c(&self) -> Self::Out {
+        let mut strs = Vec::with_capacity(self.len());
+        let mut c_strs = Vec::with_capacity(self.len());
+
+        for s in self.iter() {
+            let cs = CString::new(s.as_str()).expect("unexpected '\0' in string");
+            let ptr = cs.as_ptr();
+
+            strs.push(cs);
+            c_strs.push(ptr);
+        }
+        (strs, c_strs)
+    }
+}

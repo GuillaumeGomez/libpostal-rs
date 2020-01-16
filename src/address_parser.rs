@@ -1,8 +1,11 @@
 use sys;
 use traits::{ToC, ToRust};
 
+use Address;
 use AddressParserOptions;
 use Core;
+
+use std::ffi::CString;
 
 pub struct AddressParser<'a> {
     #[allow(dead_code)]
@@ -24,7 +27,7 @@ impl<'a> AddressParser<'a> {
         &self,
         address: &str,
         options: &AddressParserOptions,
-    ) -> Option<Vec<(String, String)>> {
+    ) -> Option<Vec<Address>> {
         let address = address.to_c();
         let (_, options) = options.to_c();
 
@@ -38,10 +41,12 @@ impl<'a> AddressParser<'a> {
                 let data = &*data;
 
                 for i in 0..data.num_components {
-                    ret.push((
-                        (*data.components.offset(i as _)).to_rust(),
-                        (*data.labels.offset(i as _)).to_rust(),
-                    ));
+                    ret.push(Address {
+                        label: CString::new((*data.labels.offset(i as _)).to_rust())
+                            .expect("unexpected '\0' in label"),
+                        value: CString::new((*data.components.offset(i as _)).to_rust())
+                            .expect("unexpected '\0' in value"),
+                    });
                 }
             }
             sys::libpostal_address_parser_response_destroy(data);
