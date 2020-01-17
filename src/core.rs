@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use sys;
 use traits::{ToC, ToRust};
@@ -9,69 +10,77 @@ use AddressParser;
 use LanguageClassifier;
 use NormalizeOptions;
 
+static INIT_CORE: once_cell::sync::Lazy<Arc<Mutex<usize>>> =
+    once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(0)));
+
 pub struct Core {
     inner: PhantomData<u32>,
 }
 
+impl Drop for Core {
+    fn drop(&mut self) {
+        if let Ok(ref mut x) = INIT_CORE.lock() {
+            if **x == 1 {
+                unsafe { sys::libpostal_teardown() }
+            }
+            **x -= 1;
+        }
+    }
+}
+
 impl Core {
     pub fn setup() -> Option<Core> {
-        if unsafe { sys::libpostal_setup() }.to_rust() {
-            Some(Core { inner: PhantomData })
-        } else {
-            None
+        if let Ok(ref mut x) = INIT_CORE.lock() {
+            if **x == 0 {
+                if unsafe { sys::libpostal_setup() }.to_rust() {
+                    **x += 1;
+                    return Some(Core { inner: PhantomData });
+                }
+            } else {
+                **x += 1;
+                return Some(Core { inner: PhantomData });
+            }
         }
+        None
     }
 
     pub fn setup_datadir<P: AsRef<Path>>(datadir: P) -> Option<Core> {
-        let datadir = datadir.as_ref();
-        let c = datadir.to_c();
-        if unsafe { sys::libpostal_setup_datadir(c.as_ptr()) }.to_rust() {
-            Some(Core { inner: PhantomData })
-        } else {
-            None
+        if let Ok(ref mut x) = INIT_CORE.lock() {
+            if **x == 0 {
+                let datadir = datadir.as_ref();
+                let c = datadir.to_c();
+                if unsafe { sys::libpostal_setup_datadir(c.as_ptr()) }.to_rust() {
+                    **x += 1;
+                    return Some(Core { inner: PhantomData });
+                }
+            } else {
+                **x += 1;
+                return Some(Core { inner: PhantomData });
+            }
         }
+        None
     }
 
     pub fn setup_parser<'a>(&'a self) -> Option<AddressParser<'a>> {
-        if unsafe { sys::libpostal_setup_parser() }.to_rust() {
-            Some(AddressParser { inner: self })
-        } else {
-            None
-        }
+        AddressParser::new(self)
     }
 
     pub fn setup_parser_datadir<'a, P: AsRef<Path>>(
         &'a self,
         datadir: P,
     ) -> Option<AddressParser<'a>> {
-        let datadir = datadir.as_ref();
-        let c = datadir.to_c();
-        if unsafe { sys::libpostal_setup_parser_datadir(c.as_ptr()) }.to_rust() {
-            Some(AddressParser { inner: self })
-        } else {
-            None
-        }
+        AddressParser::new_datadir(self, datadir)
     }
 
     pub fn setup_language_classifier<'a>(&'a self) -> Option<LanguageClassifier<'a>> {
-        if unsafe { sys::libpostal_setup_language_classifier() }.to_rust() {
-            Some(LanguageClassifier { inner: self })
-        } else {
-            None
-        }
+        LanguageClassifier::new(self)
     }
 
     pub fn setup_language_classifier_datadir<'a, P: AsRef<Path>>(
         &'a self,
         datadir: P,
     ) -> Option<LanguageClassifier<'a>> {
-        let datadir = datadir.as_ref();
-        let c = datadir.to_c();
-        if unsafe { sys::libpostal_setup_language_classifier_datadir(c.as_ptr()) }.to_rust() {
-            Some(LanguageClassifier { inner: self })
-        } else {
-            None
-        }
+        LanguageClassifier::new_datadir(self, datadir)
     }
 
     pub fn get_default_options(&self) -> NormalizeOptions {
@@ -104,11 +113,5 @@ impl Core {
             sys::libpostal_expansion_array_destroy(ptr, size);
         }
         ret
-    }
-}
-
-impl Drop for Core {
-    fn drop(&mut self) {
-        unsafe { sys::libpostal_teardown() }
     }
 }

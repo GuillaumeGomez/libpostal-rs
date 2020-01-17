@@ -1,5 +1,6 @@
 use std::ffi::CString;
 
+use enums::AddressComponent;
 use sys;
 use traits::{ToC, ToRust};
 
@@ -36,47 +37,6 @@ impl ToC for AddressComponents {
 
     fn to_c(&self) -> u16 {
         self.inner
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum AddressComponent {
-    Any,
-    Name,
-    HouseNumber,
-    Street,
-    Unit,
-    Level,
-    Staircase,
-    Entrance,
-    Category,
-    Near,
-    Toponym,
-    PostalCode,
-    POBox,
-    All,
-}
-
-impl ToC for AddressComponent {
-    type Out = u16;
-
-    fn to_c(&self) -> u16 {
-        match *self {
-            AddressComponent::Any => sys::LIBPOSTAL_ADDRESS_ANY,
-            AddressComponent::Name => sys::LIBPOSTAL_ADDRESS_NAME,
-            AddressComponent::HouseNumber => sys::LIBPOSTAL_ADDRESS_HOUSE_NUMBER,
-            AddressComponent::Street => sys::LIBPOSTAL_ADDRESS_STREET,
-            AddressComponent::Unit => sys::LIBPOSTAL_ADDRESS_UNIT,
-            AddressComponent::Level => sys::LIBPOSTAL_ADDRESS_LEVEL,
-            AddressComponent::Staircase => sys::LIBPOSTAL_ADDRESS_STAIRCASE,
-            AddressComponent::Entrance => sys::LIBPOSTAL_ADDRESS_ENTRANCE,
-            AddressComponent::Category => sys::LIBPOSTAL_ADDRESS_CATEGORY,
-            AddressComponent::Near => sys::LIBPOSTAL_ADDRESS_NEAR,
-            AddressComponent::Toponym => sys::LIBPOSTAL_ADDRESS_TOPONYM,
-            AddressComponent::PostalCode => sys::LIBPOSTAL_ADDRESS_POSTAL_CODE,
-            AddressComponent::POBox => sys::LIBPOSTAL_ADDRESS_PO_BOX,
-            AddressComponent::All => sys::LIBPOSTAL_ADDRESS_ALL,
-        }
     }
 }
 
@@ -320,5 +280,62 @@ impl ToRust for sys::libpostal_near_dupe_hash_options_t {
             name_only_keys: self.name_only_keys.to_rust(),
             address_only_keys: self.address_only_keys.to_rust(),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct DuplicateOptions {
+    pub languages: Vec<String>,
+}
+
+impl ToC for DuplicateOptions {
+    // Funnily enough, to not kill performances, we return a tuple containing:
+    //
+    // (
+    //  The original types where Vec<c_char*> points to,
+    //  The vector pointing to data (we need to return it or the vec will be freed before we can
+    //     even use it),
+    //  The actual struct used by C,
+    // )
+    type Out = (
+        Vec<CString>,
+        Vec<*const c_char>,
+        sys::libpostal_duplicate_options_t,
+    );
+
+    #[inline]
+    fn to_c(&self) -> Self::Out {
+        let (x, languages) = self.languages.as_slice().to_c();
+        let ptrs = languages.as_ptr();
+        (
+            x,
+            languages,
+            sys::libpostal_duplicate_options_t {
+                num_languages: self.languages.len() as _,
+                languages: ptrs as usize as _,
+            },
+        )
+    }
+}
+
+impl ToRust for sys::libpostal_duplicate_options_t {
+    type Out = DuplicateOptions;
+
+    #[inline]
+    fn to_rust(&self) -> Self::Out {
+        if self.languages.is_null() || self.num_languages == 0 {
+            return DuplicateOptions {
+                languages: Vec::new(),
+            };
+        }
+
+        let mut languages = Vec::with_capacity(self.num_languages);
+        for i in 0..self.num_languages {
+            languages.push(unsafe { (*self.languages.offset(i as _)).to_rust() });
+        }
+        unsafe {
+            sys::libpostal_expansion_array_destroy(self.languages, self.num_languages);
+        }
+        DuplicateOptions { languages }
     }
 }
