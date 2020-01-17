@@ -7,6 +7,8 @@ use Address;
 use Core;
 use DuplicateOptions;
 use DuplicateStatus;
+use FuzzyDuplicateOptions;
+use FuzzyDuplicateStatus;
 use NearDupeHashOptions;
 
 static INIT_LANGUAGE_CLASSIFIER: once_cell::sync::Lazy<Arc<Mutex<usize>>> =
@@ -261,6 +263,61 @@ impl<'a> LanguageClassifier<'a> {
 
         unsafe {
             sys::libpostal_is_postal_code_duplicate(value1.as_ptr(), value2.as_ptr(), options)
+        }
+        .to_rust()
+    }
+
+    pub fn get_default_fuzzy_duplicate_options(&self) -> FuzzyDuplicateOptions {
+        unsafe { sys::libpostal_get_default_fuzzy_duplicate_options() }.to_rust()
+    }
+
+    pub fn get_default_fuzzy_duplicate_options_with_languages(
+        &self,
+        languages: &[String],
+    ) -> FuzzyDuplicateOptions {
+        let (_, languages) = languages.to_c();
+        unsafe {
+            sys::libpostal_get_default_fuzzy_duplicate_options_with_languages(
+                languages.len() as _,
+                languages.as_ptr(),
+            )
+        }
+        .to_rust()
+    }
+
+    pub fn is_name_duplicate_fuzzy(
+        &self,
+        values1: &[(String, f64)],
+        values2: &[(String, f64)],
+        options: &FuzzyDuplicateOptions,
+    ) -> FuzzyDuplicateStatus {
+        let converter = |v: &[(String, f64)]| {
+            let mut labels = Vec::with_capacity(v.len());
+            let mut c_labels = Vec::with_capacity(v.len());
+            let mut floats = Vec::with_capacity(v.len());
+
+            for (l, f) in v.iter() {
+                let label = l.to_c();
+                c_labels.push(label.as_ptr());
+                labels.push(label);
+                floats.push(*f);
+            }
+            (labels, c_labels, floats)
+        };
+        let (_, labels1, v1) = converter(values1);
+        let (_, labels2, v2) = converter(values2);
+        let (_, _, options) = options.to_c();
+
+        unsafe {
+            sys::libpostal_is_name_duplicate_fuzzy(
+                values1.len() as _,
+                labels1.as_ptr(),
+                v1.as_ptr(),
+                values2.len(),
+                labels2.as_ptr(),
+                v2.as_ptr(),
+                options,
+            )
         }
         .to_rust()
     }

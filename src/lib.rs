@@ -6,8 +6,8 @@ pub use core::Core;
 pub use enums::{AddressComponent, DuplicateStatus};
 pub use language_classifier::LanguageClassifier;
 pub use options::{
-    AddressComponents, AddressParserOptions, DuplicateOptions, NearDupeHashOptions,
-    NormalizeOptions,
+    AddressComponents, AddressParserOptions, DuplicateOptions, FuzzyDuplicateOptions,
+    FuzzyDuplicateStatus, NearDupeHashOptions, NormalizeOptions,
 };
 
 mod address;

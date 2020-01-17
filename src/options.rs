@@ -1,6 +1,6 @@
 use std::ffi::CString;
 
-use enums::AddressComponent;
+use enums::{AddressComponent, DuplicateStatus};
 use sys;
 use traits::{ToC, ToRust};
 
@@ -337,5 +337,105 @@ impl ToRust for sys::libpostal_duplicate_options_t {
             sys::libpostal_expansion_array_destroy(self.languages, self.num_languages);
         }
         DuplicateOptions { languages }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct FuzzyDuplicateOptions {
+    pub languages: Vec<String>,
+    pub needs_review_threshold: f64,
+    pub likely_dupe_threshold: f64,
+}
+
+impl ToC for FuzzyDuplicateOptions {
+    // Funnily enough, to not kill performances, we return a tuple containing:
+    //
+    // (
+    //  The original types where Vec<c_char*> points to,
+    //  The vector pointing to data (we need to return it or the vec will be freed before we can
+    //     even use it),
+    //  The actual struct used by C,
+    // )
+    type Out = (
+        Vec<CString>,
+        Vec<*const c_char>,
+        sys::libpostal_fuzzy_duplicate_options_t,
+    );
+
+    #[inline]
+    fn to_c(&self) -> Self::Out {
+        let (x, languages) = self.languages.as_slice().to_c();
+        let ptrs = languages.as_ptr();
+        (
+            x,
+            languages,
+            sys::libpostal_fuzzy_duplicate_options_t {
+                num_languages: self.languages.len() as _,
+                languages: ptrs as usize as _,
+                needs_review_threshold: self.needs_review_threshold,
+                likely_dupe_threshold: self.likely_dupe_threshold,
+            },
+        )
+    }
+}
+
+impl ToRust for sys::libpostal_fuzzy_duplicate_options_t {
+    type Out = FuzzyDuplicateOptions;
+
+    #[inline]
+    fn to_rust(&self) -> Self::Out {
+        if self.languages.is_null() || self.num_languages == 0 {
+            return FuzzyDuplicateOptions {
+                languages: Vec::new(),
+                needs_review_threshold: self.needs_review_threshold,
+                likely_dupe_threshold: self.likely_dupe_threshold,
+            };
+        }
+
+        let mut languages = Vec::with_capacity(self.num_languages);
+        for i in 0..self.num_languages {
+            languages.push(unsafe { (*self.languages.offset(i as _)).to_rust() });
+        }
+        unsafe {
+            sys::libpostal_expansion_array_destroy(
+                self.languages as usize as _,
+                self.num_languages,
+            );
+        }
+        FuzzyDuplicateOptions {
+            languages,
+            needs_review_threshold: self.needs_review_threshold,
+            likely_dupe_threshold: self.likely_dupe_threshold,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct FuzzyDuplicateStatus {
+    status: DuplicateStatus,
+    similarity: f64,
+}
+
+impl ToC for FuzzyDuplicateStatus {
+    type Out = sys::libpostal_fuzzy_duplicate_status_t;
+
+    #[inline]
+    fn to_c(&self) -> Self::Out {
+        sys::libpostal_fuzzy_duplicate_status_t {
+            status: self.status.to_c(),
+            similarity: self.similarity,
+        }
+    }
+}
+
+impl ToRust for sys::libpostal_fuzzy_duplicate_status_t {
+    type Out = FuzzyDuplicateStatus;
+
+    #[inline]
+    fn to_rust(&self) -> Self::Out {
+        FuzzyDuplicateStatus {
+            status: self.status.to_rust(),
+            similarity: self.similarity,
+        }
     }
 }
