@@ -1,5 +1,5 @@
 use sys;
-use traits::ToC;
+use traits::{ToC, ToRust};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AddressComponent {
@@ -54,7 +54,7 @@ pub enum DuplicateStatus {
 impl ToC for DuplicateStatus {
     type Out = sys::libpostal_duplicate_status_t;
 
-    fn to_c(&self) -> sys::libpostal_duplicate_status_t {
+    fn to_c(&self) -> Self::Out {
         match *self {
             DuplicateStatus::Null => {
                 sys::libpostal_duplicate_status_t::LIBPOSTAL_NULL_DUPLICATE_STATUS
@@ -70,6 +70,30 @@ impl ToC for DuplicateStatus {
             }
             DuplicateStatus::ExactDuplicate => {
                 sys::libpostal_duplicate_status_t::LIBPOSTAL_EXACT_DUPLICATE
+            }
+        }
+    }
+}
+
+impl ToRust for sys::libpostal_duplicate_status_t {
+    type Out = DuplicateStatus;
+
+    fn to_rust(&self) -> Self::Out {
+        match *self {
+            sys::libpostal_duplicate_status_t::LIBPOSTAL_NULL_DUPLICATE_STATUS => {
+                DuplicateStatus::Null
+            }
+            sys::libpostal_duplicate_status_t::LIBPOSTAL_NON_DUPLICATE => {
+                DuplicateStatus::NonDuplicate
+            }
+            sys::libpostal_duplicate_status_t::LIBPOSTAL_POSSIBLE_DUPLICATE_NEEDS_REVIEW => {
+                DuplicateStatus::PossibleDuplicateNeedsReview
+            }
+            sys::libpostal_duplicate_status_t::LIBPOSTAL_LIKELY_DUPLICATE => {
+                DuplicateStatus::LikelyDuplicate
+            }
+            sys::libpostal_duplicate_status_t::LIBPOSTAL_EXACT_DUPLICATE => {
+                DuplicateStatus::ExactDuplicate
             }
         }
     }

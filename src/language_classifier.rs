@@ -6,6 +6,7 @@ use traits::{ToC, ToRust};
 use Address;
 use Core;
 use DuplicateOptions;
+use DuplicateStatus;
 use NearDupeHashOptions;
 
 static INIT_LANGUAGE_CLASSIFIER: once_cell::sync::Lazy<Arc<Mutex<usize>>> =
@@ -121,6 +122,147 @@ impl<'a> LanguageClassifier<'a> {
         } else {
             Vec::new()
         }
+    }
+
+    pub fn get_default_duplicate_options(&self) -> DuplicateOptions {
+        unsafe { sys::libpostal_get_default_duplicate_options() }.to_rust()
+    }
+
+    pub fn get_duplicate_options_with_languages(&self, languages: &[String]) -> DuplicateOptions {
+        let (_, languages) = languages.to_c();
+        unsafe {
+            sys::libpostal_get_duplicate_options_with_languages(
+                languages.len() as _,
+                languages.as_ptr(),
+            )
+        }
+        .to_rust()
+    }
+
+    pub fn is_toponym_duplicate(
+        &self,
+        addresses1: &[Address],
+        addresses2: &[Address],
+        options: &DuplicateOptions,
+    ) -> DuplicateStatus {
+        let (labels1, values1) = addresses1.to_c();
+        let (labels2, values2) = addresses2.to_c();
+        let (_, _, options) = options.to_c();
+
+        unsafe {
+            sys::libpostal_is_toponym_duplicate(
+                addresses1.len() as _,
+                labels1.as_ptr(),
+                values1.as_ptr(),
+                addresses2.len(),
+                labels2.as_ptr(),
+                values2.as_ptr(),
+                options,
+            )
+        }
+        .to_rust()
+    }
+
+    pub fn is_name_duplicate(
+        &self,
+        value1: &str,
+        value2: &str,
+        options: &DuplicateOptions,
+    ) -> DuplicateStatus {
+        let value1 = value1.to_c();
+        let value2 = value2.to_c();
+        let (_, _, options) = options.to_c();
+
+        unsafe { sys::libpostal_is_name_duplicate(value1.as_ptr(), value2.as_ptr(), options) }
+            .to_rust()
+    }
+
+    pub fn is_street_duplicate(
+        &self,
+        value1: &str,
+        value2: &str,
+        options: &DuplicateOptions,
+    ) -> DuplicateStatus {
+        let value1 = value1.to_c();
+        let value2 = value2.to_c();
+        let (_, _, options) = options.to_c();
+
+        unsafe { sys::libpostal_is_street_duplicate(value1.as_ptr(), value2.as_ptr(), options) }
+            .to_rust()
+    }
+
+    pub fn is_house_number_duplicate(
+        &self,
+        value1: &str,
+        value2: &str,
+        options: &DuplicateOptions,
+    ) -> DuplicateStatus {
+        let value1 = value1.to_c();
+        let value2 = value2.to_c();
+        let (_, _, options) = options.to_c();
+
+        unsafe {
+            sys::libpostal_is_house_number_duplicate(value1.as_ptr(), value2.as_ptr(), options)
+        }
+        .to_rust()
+    }
+
+    pub fn is_po_box_duplicate(
+        &self,
+        value1: &str,
+        value2: &str,
+        options: &DuplicateOptions,
+    ) -> DuplicateStatus {
+        let value1 = value1.to_c();
+        let value2 = value2.to_c();
+        let (_, _, options) = options.to_c();
+
+        unsafe { sys::libpostal_is_po_box_duplicate(value1.as_ptr(), value2.as_ptr(), options) }
+            .to_rust()
+    }
+
+    pub fn is_unit_duplicate(
+        &self,
+        value1: &str,
+        value2: &str,
+        options: &DuplicateOptions,
+    ) -> DuplicateStatus {
+        let value1 = value1.to_c();
+        let value2 = value2.to_c();
+        let (_, _, options) = options.to_c();
+
+        unsafe { sys::libpostal_is_unit_duplicate(value1.as_ptr(), value2.as_ptr(), options) }
+            .to_rust()
+    }
+
+    pub fn is_floor_duplicate(
+        &self,
+        value1: &str,
+        value2: &str,
+        options: &DuplicateOptions,
+    ) -> DuplicateStatus {
+        let value1 = value1.to_c();
+        let value2 = value2.to_c();
+        let (_, _, options) = options.to_c();
+
+        unsafe { sys::libpostal_is_floor_duplicate(value1.as_ptr(), value2.as_ptr(), options) }
+            .to_rust()
+    }
+
+    pub fn is_postal_code_duplicate(
+        &self,
+        value1: &str,
+        value2: &str,
+        options: &DuplicateOptions,
+    ) -> DuplicateStatus {
+        let value1 = value1.to_c();
+        let value2 = value2.to_c();
+        let (_, _, options) = options.to_c();
+
+        unsafe {
+            sys::libpostal_is_postal_code_duplicate(value1.as_ptr(), value2.as_ptr(), options)
+        }
+        .to_rust()
     }
 }
 
