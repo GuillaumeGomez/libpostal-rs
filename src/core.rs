@@ -1,3 +1,4 @@
+use std::ffi::CString;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -10,8 +11,8 @@ use AddressParser;
 use LanguageClassifier;
 use NormalizeOptions;
 
-static INIT_CORE: once_cell::sync::Lazy<Arc<Mutex<usize>>> =
-    once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(0)));
+static INIT_CORE: once_cell::sync::Lazy<Arc<Mutex<(usize, Option<CString>)>>> =
+    once_cell::sync::Lazy::new(|| Arc::new(Mutex::new((0, None))));
 
 pub struct Core {
     inner: PhantomData<u32>,
@@ -20,10 +21,11 @@ pub struct Core {
 impl Drop for Core {
     fn drop(&mut self) {
         if let Ok(ref mut x) = INIT_CORE.lock() {
-            if **x == 1 {
+            if (**x).0 == 1 {
                 unsafe { sys::libpostal_teardown() }
+                (**x).1.take();
             }
-            **x -= 1;
+            (**x).0 -= 1;
         }
     }
 }
@@ -31,13 +33,13 @@ impl Drop for Core {
 impl Core {
     pub fn setup() -> Option<Core> {
         if let Ok(ref mut x) = INIT_CORE.lock() {
-            if **x == 0 {
+            if (**x).0 == 0 {
                 if unsafe { sys::libpostal_setup() }.to_rust() {
-                    **x += 1;
+                    (**x).0 += 1;
                     return Some(Core { inner: PhantomData });
                 }
             } else {
-                **x += 1;
+                (**x).0 += 1;
                 return Some(Core { inner: PhantomData });
             }
         }
@@ -46,15 +48,16 @@ impl Core {
 
     pub fn setup_datadir<P: AsRef<Path>>(datadir: P) -> Option<Core> {
         if let Ok(ref mut x) = INIT_CORE.lock() {
-            if **x == 0 {
+            if (**x).0 == 0 {
                 let datadir = datadir.as_ref();
                 let c = datadir.to_c();
                 if unsafe { sys::libpostal_setup_datadir(c.as_ptr()) }.to_rust() {
-                    **x += 1;
+                    (**x).0 += 1;
+                    (**x).1 = Some(c);
                     return Some(Core { inner: PhantomData });
                 }
             } else {
-                **x += 1;
+                (**x).0 += 1;
                 return Some(Core { inner: PhantomData });
             }
         }

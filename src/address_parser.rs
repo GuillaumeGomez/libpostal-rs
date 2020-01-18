@@ -9,8 +9,8 @@ use std::ffi::CString;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-static INIT_ADDRESS_PARSER: once_cell::sync::Lazy<Arc<Mutex<usize>>> =
-    once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(0)));
+static INIT_ADDRESS_PARSER: once_cell::sync::Lazy<Arc<Mutex<(usize, Option<CString>)>>> =
+    once_cell::sync::Lazy::new(|| Arc::new(Mutex::new((0, None))));
 
 pub struct AddressParser<'a> {
     #[allow(dead_code)]
@@ -20,10 +20,11 @@ pub struct AddressParser<'a> {
 impl<'a> Drop for AddressParser<'a> {
     fn drop(&mut self) {
         if let Ok(ref mut x) = INIT_ADDRESS_PARSER.lock() {
-            if **x == 1 {
+            if (**x).0 == 1 {
                 unsafe { sys::libpostal_teardown_parser() }
+                (**x).1.take();
             }
-            **x -= 1;
+            (**x).0 -= 1;
         }
     }
 }
@@ -31,13 +32,13 @@ impl<'a> Drop for AddressParser<'a> {
 impl<'a> AddressParser<'a> {
     pub(crate) fn new(core: &'a Core) -> Option<AddressParser<'a>> {
         if let Ok(ref mut x) = INIT_ADDRESS_PARSER.lock() {
-            if **x == 0 {
+            if (**x).0 == 0 {
                 if unsafe { sys::libpostal_setup_parser() }.to_rust() {
-                    **x += 1;
+                    (**x).0 += 1;
                     return Some(AddressParser { inner: core });
                 }
             } else {
-                **x += 1;
+                (**x).0 += 1;
                 return Some(AddressParser { inner: core });
             }
         }
@@ -49,15 +50,16 @@ impl<'a> AddressParser<'a> {
         datadir: P,
     ) -> Option<AddressParser<'a>> {
         if let Ok(ref mut x) = INIT_ADDRESS_PARSER.lock() {
-            if **x == 0 {
+            if (**x).0 == 0 {
                 let datadir = datadir.as_ref();
                 let c = datadir.to_c();
                 if unsafe { sys::libpostal_setup_parser_datadir(c.as_ptr()) }.to_rust() {
-                    **x += 1;
+                    (**x).0 += 1;
+                    (**x).1 = Some(c);
                     return Some(AddressParser { inner: core });
                 }
             } else {
-                **x += 1;
+                (**x).0 += 1;
                 return Some(AddressParser { inner: core });
             }
         }
