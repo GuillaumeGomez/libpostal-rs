@@ -26,7 +26,7 @@ impl<'a> Drop for LanguageClassifier<'a> {
         if let Ok(ref mut x) = INIT_LANGUAGE_CLASSIFIER.lock() {
             if (**x).0 == 1 {
                 unsafe { sys::libpostal_teardown_language_classifier() }
-                (**x).1.take();
+                (**x).1 = None;
             }
             (**x).0 -= 1;
         }
@@ -34,37 +34,36 @@ impl<'a> Drop for LanguageClassifier<'a> {
 }
 
 impl<'a> LanguageClassifier<'a> {
+    /// Initialize the language classifier setting.
+    ///
+    /// NOTE: If you already initialized it, it'll mostly do nothing. However, if you already
+    /// initialized it with a `datadir`, it'll be overwritten since `libpostal` handles it globally.
     pub(crate) fn new(core: &'a Core) -> Option<LanguageClassifier<'a>> {
         if let Ok(ref mut x) = INIT_LANGUAGE_CLASSIFIER.lock() {
-            if (**x).0 == 0 {
-                if unsafe { sys::libpostal_setup_language_classifier() }.to_rust() {
-                    (**x).0 += 1;
-                    return Some(LanguageClassifier { inner: core });
-                }
-            } else {
+            if unsafe { sys::libpostal_setup_language_classifier() }.to_rust() {
                 (**x).0 += 1;
+                (**x).1 = None;
                 return Some(LanguageClassifier { inner: core });
             }
         }
         None
     }
 
+    /// Initialize the language classifier setting with a given `datadir`.
+    ///
+    /// NOTE: If you already initialized it, it'll mostly do nothing. However, the `datadir` will be
+    /// overwritten with the new one since `libpostal` handles it globally.
     pub(crate) fn new_datadir<P: AsRef<Path>>(
         core: &'a Core,
         datadir: P,
     ) -> Option<LanguageClassifier<'a>> {
         if let Ok(ref mut x) = INIT_LANGUAGE_CLASSIFIER.lock() {
-            if (**x).0 == 0 {
-                let datadir = datadir.as_ref();
-                let c = datadir.to_c();
-                if unsafe { sys::libpostal_setup_language_classifier_datadir(c.as_ptr()) }.to_rust()
-                {
-                    (**x).0 += 1;
-                    (**x).1 = Some(c);
-                    return Some(LanguageClassifier { inner: core });
-                }
-            } else {
+            let datadir = datadir.as_ref();
+            let c = datadir.to_c();
+            if unsafe { sys::libpostal_setup_language_classifier_datadir(c.as_ptr()) }.to_rust()
+            {
                 (**x).0 += 1;
+                (**x).1 = Some(c);
                 return Some(LanguageClassifier { inner: core });
             }
         }
