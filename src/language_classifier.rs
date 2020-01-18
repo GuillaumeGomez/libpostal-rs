@@ -1,5 +1,7 @@
+use std::ffi::CString;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+
 use sys;
 use traits::{ToC, ToRust};
 
@@ -11,24 +13,36 @@ use FuzzyDuplicateOptions;
 use FuzzyDuplicateStatus;
 use NearDupeHashOptions;
 
-static INIT_LANGUAGE_CLASSIFIER: once_cell::sync::Lazy<Arc<Mutex<usize>>> =
-    once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(0)));
+static INIT_LANGUAGE_CLASSIFIER: once_cell::sync::Lazy<Arc<Mutex<(usize, Option<CString>)>>> =
+    once_cell::sync::Lazy::new(|| Arc::new(Mutex::new((0, None))));
 
 pub struct LanguageClassifier<'a> {
     #[allow(dead_code)]
     inner: &'a Core,
 }
 
+impl<'a> Drop for LanguageClassifier<'a> {
+    fn drop(&mut self) {
+        if let Ok(ref mut x) = INIT_LANGUAGE_CLASSIFIER.lock() {
+            if (**x).0 == 1 {
+                unsafe { sys::libpostal_teardown_language_classifier() }
+                (**x).1.take();
+            }
+            (**x).0 -= 1;
+        }
+    }
+}
+
 impl<'a> LanguageClassifier<'a> {
     pub(crate) fn new(core: &'a Core) -> Option<LanguageClassifier<'a>> {
         if let Ok(ref mut x) = INIT_LANGUAGE_CLASSIFIER.lock() {
-            if **x == 0 {
+            if (**x).0 == 0 {
                 if unsafe { sys::libpostal_setup_language_classifier() }.to_rust() {
-                    **x += 1;
+                    (**x).0 += 1;
                     return Some(LanguageClassifier { inner: core });
                 }
             } else {
-                **x += 1;
+                (**x).0 += 1;
                 return Some(LanguageClassifier { inner: core });
             }
         }
@@ -40,16 +54,17 @@ impl<'a> LanguageClassifier<'a> {
         datadir: P,
     ) -> Option<LanguageClassifier<'a>> {
         if let Ok(ref mut x) = INIT_LANGUAGE_CLASSIFIER.lock() {
-            if **x == 0 {
+            if (**x).0 == 0 {
                 let datadir = datadir.as_ref();
                 let c = datadir.to_c();
                 if unsafe { sys::libpostal_setup_language_classifier_datadir(c.as_ptr()) }.to_rust()
                 {
-                    **x += 1;
+                    (**x).0 += 1;
+                    (**x).1 = Some(c);
                     return Some(LanguageClassifier { inner: core });
                 }
             } else {
-                **x += 1;
+                (**x).0 += 1;
                 return Some(LanguageClassifier { inner: core });
             }
         }
@@ -320,16 +335,5 @@ impl<'a> LanguageClassifier<'a> {
             )
         }
         .to_rust()
-    }
-}
-
-impl<'a> Drop for LanguageClassifier<'a> {
-    fn drop(&mut self) {
-        if let Ok(ref mut x) = INIT_LANGUAGE_CLASSIFIER.lock() {
-            if **x == 1 {
-                unsafe { sys::libpostal_teardown_language_classifier() }
-            }
-            **x -= 1;
-        }
     }
 }
