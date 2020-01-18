@@ -60,8 +60,7 @@ impl<'a> LanguageClassifier<'a> {
         if let Ok(ref mut x) = INIT_LANGUAGE_CLASSIFIER.lock() {
             let datadir = datadir.as_ref();
             let c = datadir.to_c();
-            if unsafe { sys::libpostal_setup_language_classifier_datadir(c.as_ptr()) }.to_rust()
-            {
+            if unsafe { sys::libpostal_setup_language_classifier_datadir(c.as_ptr()) }.to_rust() {
                 (**x).0 += 1;
                 (**x).1 = Some(c);
                 return Some(LanguageClassifier { inner: core });
