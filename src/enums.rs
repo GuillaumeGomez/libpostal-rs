@@ -1,7 +1,7 @@
 use sys;
 use traits::{ToC, ToRust};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AddressComponent {
     Any,
     Name,
@@ -42,7 +42,7 @@ impl ToC for AddressComponent {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DuplicateStatus {
     Null,
     NonDuplicate,

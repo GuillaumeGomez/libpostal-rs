@@ -4,6 +4,7 @@ use std::ffi::CString;
 
 use libc::c_char;
 
+#[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Address {
     pub label: CString,
     pub value: CString,
