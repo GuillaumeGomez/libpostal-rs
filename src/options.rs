@@ -6,7 +6,7 @@ use traits::{ToC, ToRust};
 
 use libc::{c_char, free};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AddressComponents {
     inner: u16,
 }
